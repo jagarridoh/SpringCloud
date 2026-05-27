@@ -1,5 +1,6 @@
 package com.jagh.springcloud.msvc.products.controllers;
 
+import java.util.Date;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -33,7 +34,10 @@ public class ProductController {
             throw new IllegalStateException("Product not found");
         }
         if(id.equals(7L)) {
-            TimeUnit.SECONDS.sleep(4L);
+            System.out.println(new Date());
+            TimeUnit.SECONDS.sleep(3L);
+            System.out.println(new Date());
+            System.out.println("Product with id 7: Time out");
         }
         Optional<Product> productOptional = service.findById(id);
 
