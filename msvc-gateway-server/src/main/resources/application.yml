@@ -1,0 +1,32 @@
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: msvc-products
+          uri: lb://msvc-products
+          predicates:
+            - Path=/api/products/**
+          #  - Header=token, \d+
+          #  - Method=GET, POST
+          #  - Query=color,
+          #  - Cookie=color, azul
+          #  - Header=Content-Type, application/json
+          filters:
+            - StripPrefix=2
+            - EjemploCookie=Mensaje 4 desde el filtro, user4
+            - EjemploCookie=Mensaje 2 desde el filtro, user2, jagh2
+            - EjemploCookie=Mensaje 1 desde el filtro, user1, jagh1
+            - name: EjemploCookie
+              args: 
+                message: Mensaje 3 desde el filtro
+                cookieName: user3
+                cookieValue: jagh3
+        - id: msvc-items
+          uri: lb://msvc-items
+          predicates:
+            - Path=/api/items/**
+          filters:
+            - StripPrefix=2
+            - AddRequestHeader=token-request, otroHeader
+            - AddResponseHeader=token-response, otroRespHeader
+            - AddRequestParameter=name,jagh5
