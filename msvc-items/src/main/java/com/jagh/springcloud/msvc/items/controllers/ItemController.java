@@ -6,6 +6,8 @@ import com.jagh.springcloud.msvc.items.models.Item;
 import com.jagh.springcloud.msvc.items.models.Product;
 import com.jagh.springcloud.msvc.items.services.ItemService;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
@@ -23,11 +25,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 @RestController
 public class ItemController {
-    private final ItemService service;
-    private final CircuitBreakerFactory cBreakerFactory;
+
     private final Logger logger = LoggerFactory.getLogger(ItemController.class);
 
-    public ItemController(@Qualifier("itemServiceWebClient") ItemService service, CircuitBreakerFactory cBreakerFactory) {
+    private final ItemService service;
+    private final CircuitBreakerFactory cBreakerFactory;
+
+    public ItemController(@Qualifier("itemServiceWebClient") ItemService service, 
+            CircuitBreakerFactory cBreakerFactory) {
         this.cBreakerFactory = cBreakerFactory;
         this.service = service;
     }
@@ -42,26 +47,63 @@ public class ItemController {
     
     @GetMapping("/{id}")
     public ResponseEntity<?> details(@PathVariable Long id) {
-        //Optional<Item> itemOptional = service.findById(id);
         Optional<Item> itemOptional = cBreakerFactory.create("items").run(() -> service.findById(id), e -> {
             System.out.println(e.getMessage());
             logger.error(e.getMessage());
+
             Product product = new Product();
+            product.setCreatedAt(
+                LocalDate.now());
             product.setId(1L);
-            product.setCreatedAt(LocalDate.now());
             product.setName("Camara Sony");
-            product.setPrice(500.00);
-            Item item = new Item();
-            item.setProduct(product);
-            item.setQuantity(5);
-            return Optional.of(item); 
+            product.setPrice(
+                500.00);
+            return Optional.of(new Item(product,
+                    5)); 
         });
+
         if(itemOptional.isPresent()) {
             return ResponseEntity.ok(itemOptional.get());
         }
         //return ResponseEntity.notFound().build(); << correcto pero devuelve body vacio
         return ResponseEntity.status(404)
-        .body(Collections.singletonMap("message",
-        "No existe el producto en el microservicio msvc-products"));
+                .body(Collections.singletonMap(
+                    "message",
+                    "No existe el producto en el microservicio msvc-products"));
     }
+
+    @CircuitBreaker(name = "items", fallbackMethod = "getFallBackmethodProduct")
+    @GetMapping("/details/{id}")
+    public ResponseEntity<?> details2(@PathVariable Long id) {
+        Optional<Item> itemOptional = service.findById(id);
+
+        if(itemOptional.isPresent()) {
+            return ResponseEntity.ok(itemOptional.get());
+        }
+        //return ResponseEntity.notFound().build(); << correcto pero devuelve body vacio
+        return ResponseEntity.status(404)
+                .body(Collections.singletonMap(
+                    "message",
+                    "No existe el producto en el microservicio msvc-products"));
+    }
+
+    public ResponseEntity<?> getFallBackmethodProduct(Throwable e) {
+        System.out.println(e.getMessage());
+        logger.error(e.getMessage());
+
+        Product product = new Product();
+        product.setCreatedAt(
+            LocalDate.now());
+        product.setId(1L);
+        product.setName("Camara Sony");
+        product.setPrice(
+            500.00);
+        return ResponseEntity.ok(new Item(product,
+            5));
+
+
+
+
+    }
+
 }
