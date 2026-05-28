@@ -11,13 +11,16 @@ import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
 
 import java.time.LocalDate;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.client.circuitbreaker.CircuitBreakerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,12 +36,25 @@ public class ItemController {
     private final ItemService service;
     private final CircuitBreakerFactory cBreakerFactory;
     
+    @Value("${configuracion.texto}")
+    private String text;
+
     public ItemController(@Qualifier("itemServiceWebClient") ItemService service, 
     CircuitBreakerFactory cBreakerFactory) {
         this.cBreakerFactory = cBreakerFactory;
         this.service = service;
     }
     
+    @GetMapping("/fetch-configs")
+    public ResponseEntity<?> fetchConfigs(@Value("${server.port}") String port) {
+        Map<String, String> json = new HashMap<>();
+        json.put("texto", text);
+        json.put("port", port);
+        logger.info("Texto: " + text + ", Puerto: " + port);
+        return ResponseEntity.ok(json);
+    }
+
+
     @GetMapping
     public List<Item> list(@RequestParam(name = "name", required = false) String name,
     @RequestHeader(name = "token-request", required = false) String token) {
